@@ -4,11 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-# ==== 設定部分ここから ====
-dir1 = "exp_src/"
-dir2 = "48bit_alpha0.1/"
-# ==== 設定部分ここまで ====
-
 def calculate_psnr(image_path1, image_path2):
     #画像の読み込み
     original  = cv2.imread(image_path1) #元画像
@@ -49,97 +44,113 @@ def calculate_psnr(image_path1, image_path2):
     
     return PSNR
 
-valid_extensions = ['.png', '.jpg', '.jpeg', '.bmp']
-
 def get_base_name(filename):
     return os.path.splitext(filename)[0]
 
-files1 = [f for f in os.listdir(dir1) if os.path.splitext(f)[1].lower() in valid_extensions]
-files2 = [f for f in os.listdir(dir2) if os.path.splitext(f)[1].lower() in valid_extensions]
+# 設定パラメータを格納するリスト
+alpha_list = [0.1, 0.2]
+bit_list = [48, 400]
 
-base_dict_1 = {get_base_name(f): f for f in files1}
-base_dict_2 = {get_base_name(f): f for f in files2}
+# 設定パラメータごとに実行
+for alpha in alpha_list:
+    for bit in bit_list:
+        # ==== 設定部分ここから ====
+        dir1 = "exp_src/"
+        dir2 = f"{bit}bit_alpha{alpha}/"
+        # ==== 設定部分ここまで ====
 
-# ソートを大文字小文字を区別しない形に修正
-common_bases = sorted(set(base_dict_1.keys()) & set(base_dict_2.keys()), key=str.lower)
+        valid_extensions = ['.png', '.jpg', '.jpeg', '.bmp']
 
-psnr_values = []
-images_for_axis = []
+        files1 = [f for f in os.listdir(dir1) if os.path.splitext(f)[1].lower() in valid_extensions]
+        files2 = [f for f in os.listdir(dir2) if os.path.splitext(f)[1].lower() in valid_extensions]
 
-for base in common_bases:
-    img_path_1 = os.path.join(dir1, base_dict_1[base])
-    img_path_2 = os.path.join(dir2, base_dict_2[base])
+        base_dict_1 = {get_base_name(f): f for f in files1}
+        base_dict_2 = {get_base_name(f): f for f in files2}
 
-    # 画像読み込み
-    img1 = np.array(Image.open(img_path_1).convert("RGB"))
-    img2 = np.array(Image.open(img_path_2).convert("RGB"))
+        # ソートを大文字小文字を区別しない形に修正
+        common_bases = sorted(set(base_dict_1.keys()) & set(base_dict_2.keys()), key=str.lower)
 
-    # 画像サイズ揃え
-    if img1.shape != img2.shape:
-        img2 = np.array(Image.open(img_path_2).convert("RGB").resize((img1.shape[1], img1.shape[0])))
+        psnr_values = []
+        images_for_axis = []
 
-    # PSNR計算
-    psnr_value = calculate_psnr(img_path_1, img_path_2)
-    psnr_values.append(psnr_value)
+        for base in common_bases:
+            img_path_1 = os.path.join(dir1, base_dict_1[base])
+            img_path_2 = os.path.join(dir2, base_dict_2[base])
 
-    # X軸用に表示する画像(フォルダ1側の画像を使用)
-    axis_img = Image.open(img_path_1).convert("RGB")
-    images_for_axis.append(axis_img)
+            # 画像読み込み
+            img1 = np.array(Image.open(img_path_1).convert("RGB"))
+            img2 = np.array(Image.open(img_path_2).convert("RGB"))
 
-# 全画像の縦サイズを揃える(高さ固定)
-desired_height = 50
-resized_images_for_axis = []
-for img in images_for_axis:
-    aspect_ratio = img.width / img.height
-    new_width = int(desired_height * aspect_ratio)
-    img_resized = img.resize((new_width, desired_height))
-    resized_images_for_axis.append(img_resized)
+            # 画像サイズ揃え
+            if img1.shape != img2.shape:
+                img2 = np.array(Image.open(img_path_2).convert("RGB").resize((img1.shape[1], img1.shape[0])))
 
-images_for_axis = resized_images_for_axis
+            # PSNR計算
+            psnr_value = calculate_psnr(img_path_1, img_path_2)
+            psnr_values.append(psnr_value)
 
-# グラフ作成
-fig, ax = plt.subplots(figsize=(len(psnr_values)*2, 6))
+            # X軸用に表示する画像(フォルダ1側の画像を使用)
+            axis_img = Image.open(img_path_1).convert("RGB")
+            images_for_axis.append(axis_img)
 
-x_positions = np.arange(len(psnr_values))
-ax.bar(x_positions, psnr_values, color='skyblue')
+        # 全画像の縦サイズを揃える(高さ固定)
+        desired_height = 50
+        resized_images_for_axis = []
+        for img in images_for_axis:
+            aspect_ratio = img.width / img.height
+            new_width = int(desired_height * aspect_ratio)
+            img_resized = img.resize((new_width, desired_height))
+            resized_images_for_axis.append(img_resized)
 
-# 棒グラフ上部にpsnr値を表示
-for i, val in enumerate(psnr_values):
-    ax.text(i, val + 0.01, f"{val:.3f}", ha='center', va='bottom', fontsize=12)
+        images_for_axis = resized_images_for_axis
 
-# X軸目盛りは空白にする
-ax.set_xticks(x_positions)
-ax.set_xticklabels(["" for _ in x_positions])
+        # グラフ作成
+        fig, ax = plt.subplots(figsize=(len(psnr_values)*2, 6))
 
-ax.set_ylabel("PSNR")
+        x_positions = np.arange(len(psnr_values))
+        ax.bar(x_positions, psnr_values, color='skyblue')
 
-# グリッドとスパインを消す
-ax.grid(False)
-for spine in ax.spines.values():
-    spine.set_visible(False)
+        # 棒グラフ上部にpsnr値を表示
+        for i, val in enumerate(psnr_values):
+            ax.text(i, val + 0.01, f"{val:.3f}", ha='center', va='bottom', fontsize=15)
 
-# Y=0の位置にX軸線を描画
-ax.axhline(y=0, color='black', linewidth=0.5)
+        # X軸目盛りは空白にする
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(["" for _ in x_positions])
 
-# Y軸範囲設定：画像が表示されるよう、わずかに負の方向へ拡大
-min_y = -0.1
-max_y = max(psnr_values) + 0.1 if psnr_values else 1.0
-ax.set_ylim(min_y, max_y)
+        # Y軸ラベル設定
+        ax.set_ylabel("PSNR [dB]", fontsize=15)
 
-# 画像をX軸とぴったりくっつけるように配置
-# 上端がy=0になるように配置
-for i, img in enumerate(images_for_axis):
-    imagebox = OffsetImage(img, zoom=1.0)
-    ab = AnnotationBbox(imagebox, (i, 0),
-                        frameon=False,
-                        box_alignment=(0.5, 1.0))
-    ax.add_artist(ab)
+        # Y軸メモリのフォントサイズ設定
+        ax.tick_params(axis='y', labelsize=15)
 
-plt.tight_layout(pad=2.0)
-# plt.show()
+        # グリッドとスパインを消す
+        ax.grid(False)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
 
-# 画像を保存
-output_path = f"{dir2.replace('/', '')}_psnr.png"
-plt.savefig(output_path)
-print(f"saved: {output_path}")
+        # Y=0の位置にX軸線を描画
+        ax.axhline(y=0, color='black', linewidth=0.5)
+
+        # Y軸範囲設定：画像が表示されるよう、わずかに負の方向へ拡大
+        min_y = -0.1
+        max_y = max(psnr_values) + 0.1 if psnr_values else 1.0
+        ax.set_ylim(min_y, max_y)
+
+        # 画像をX軸とぴったりくっつけるように配置
+        # 上端がy=0になるように配置
+        for i, img in enumerate(images_for_axis):
+            imagebox = OffsetImage(img, zoom=1.0)
+            ab = AnnotationBbox(imagebox, (i, 0),
+                                frameon=False,
+                                box_alignment=(0.5, 1.0))
+            ax.add_artist(ab)
+
+        plt.tight_layout(pad=2.0)
+        # plt.show()
+
+        # 画像を保存
+        output_path = f"{dir2.replace('/', '')}_psnr.png"
+        plt.savefig(output_path)
+        print(f"saved: {output_path}")
 
